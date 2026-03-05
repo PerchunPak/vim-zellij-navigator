@@ -132,14 +132,14 @@ impl ZellijPlugin for State {
 
                             if self.print_to_log {
                                 eprintln!(
-                                    "[autolock] Detected command: `{}`; Executable: `{}`; Is trigger? {}.",
+                                    "[zellij.nvim] Detected command: `{}`; Executable: `{}`; Is trigger? {}.",
                                     running_command,
                                     running_command_exe,
                                     is_trigger_cmd,
                                 );
                             }
                         } else if self.print_to_log {
-                            eprintln!("[autolock] No command detected.");
+                            eprintln!("[zellij.nvim] No command detected.");
                         }
 
                         let target_input_mode = if is_trigger_cmd {
@@ -182,17 +182,17 @@ impl ZellijPlugin for State {
             if action == "enable" {
                 self.is_enabled = true;
                 if self.print_to_log {
-                    eprintln!("[autolock] Enabled");
+                    eprintln!("[zellij.nvim] Enabled");
                 }
             } else if action == "disable" {
                 self.is_enabled = false;
                 if self.print_to_log {
-                    eprintln!("[autolock] Disabled");
+                    eprintln!("[zellij.nvim] Disabled");
                 }
             } else if action == "toggle" {
                 self.is_enabled = !self.is_enabled;
                 if self.print_to_log {
-                    eprintln!("[autolock] Enabled: {}", self.is_enabled);
+                    eprintln!("[zellij.nvim] Enabled: {}", self.is_enabled);
                 }
             }
         }
@@ -227,10 +227,13 @@ impl State {
         }
 
         if self.print_to_log {
-            eprintln!("[autolock] Configuration loaded.");
-            eprintln!("[autolock] Enabled: {}", self.is_enabled);
-            eprintln!("[autolock] Trigger commands: {:?}", self.lock_trigger_cmds);
-            eprintln!("[autolock] Reaction seconds: {}", self.reaction_seconds);
+            eprintln!("[zellij.nvim] Configuration loaded.");
+            eprintln!("[zellij.nvim] Enabled: {}", self.is_enabled);
+            eprintln!(
+                "[zellij.nvim] Trigger commands: {:?}",
+                self.lock_trigger_cmds
+            );
+            eprintln!("[zellij.nvim] Reaction seconds: {}", self.reaction_seconds);
         }
     }
     fn start_timer(&mut self) {
