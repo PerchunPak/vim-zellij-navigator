@@ -32,6 +32,7 @@ impl ZellijPlugin for State {
         request_permission(&[
             PermissionType::ChangeApplicationState,
             PermissionType::ReadApplicationState,
+            PermissionType::WriteToStdin,
         ]);
         subscribe(&[EventType::PermissionRequestResult, EventType::ListClients]);
         if self.permissions_granted {
