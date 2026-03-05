@@ -33,6 +33,7 @@ impl ZellijPlugin for State {
             PermissionType::ChangeApplicationState,
             PermissionType::ReadApplicationState,
         ]);
+        subscribe(&[EventType::PermissionRequestResult, EventType::ListClients]);
         if self.permissions_granted {
             hide_self();
         }
@@ -52,7 +53,6 @@ impl ZellijPlugin for State {
             }
 
             Event::ListClients(clients) => {
-                // TODO: get_focused_pane
                 if let Some(direction) = self.asked_direction.clone() {
                     self.navigate(direction, clients);
                     self.asked_direction = None;
