@@ -119,13 +119,17 @@ impl State {
             return;
         };
 
-        match current_client.running_command.trim() {
-            "N/A" => self.navigate_in_zellij(direction),
-            running_command => self.navigate_in_vim(direction, running_command),
+        let running_command = current_client.running_command.trim().to_string();
+        if running_command == "N/A" {
+            if self.print_to_log {
+                eprintln!(
+                    "[zellij.nvim] no command found, trying to navigate through zellij anyway"
+                );
+                self.navigate_in_zellij(direction);
+                return;
+            }
         }
-    }
 
-    fn navigate_in_vim(&mut self, direction: String, running_command: &str) {
         let running_command_exe = running_command.split_whitespace().collect::<Vec<_>>()[0]
             .split('/')
             .last()
@@ -142,10 +146,20 @@ impl State {
             );
         };
 
-        if !is_vim_cmd {
-            return;
+        if is_vim_cmd {
+            self.navigate_in_vim(direction);
+        } else {
+            self.navigate_in_zellij(direction);
         }
+    }
 
+    fn navigate_in_vim(&mut self, direction: String) {
+        if self.print_to_log {
+            eprintln!(
+                "[zellij.nvim] navigating to direction '{}' in vim",
+                direction
+            );
+        }
         let bytes = match direction.as_ref() {
             "right" => CTRL_L,
             "right-or-tab" => CTRL_L,
@@ -171,6 +185,12 @@ impl State {
     }
 
     fn navigate_in_zellij(&mut self, direction: String) {
+        if self.print_to_log {
+            eprintln!(
+                "[zellij.nvim] navigating to direction '{}' in zellij",
+                direction
+            );
+        }
         match direction.as_ref() {
             "right" => move_focus(Direction::Right),
             "right-or-tab" => move_focus_or_tab(Direction::Right),
