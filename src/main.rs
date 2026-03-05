@@ -7,6 +7,14 @@ const CTRL_K: &'static [u8; 1] = b"\x0b";
 const CTRL_J: &'static [u8; 1] = b"\x0A";
 const CTRL_H: &'static [u8; 1] = b"\x08";
 
+macro_rules! log {
+    ($self:ident, $($arg:tt)*) => {
+        if $self.print_to_log {
+            eprintln!($($arg)*);
+        }
+    };
+}
+
 struct State {
     permissions_granted: bool,
     vim_commands: Vec<String>,
@@ -57,8 +65,9 @@ impl ZellijPlugin for State {
                 if let Some(direction) = self.asked_direction.clone() {
                     self.navigate(direction, clients);
                     self.asked_direction = None;
-                } else if self.print_to_log {
-                    eprintln!(
+                } else {
+                    log!(
+                        self,
                         "[zellij.nvim] got 'ListClients' event but no recorded asked direction"
                     );
                 }
@@ -72,12 +81,11 @@ impl ZellijPlugin for State {
     fn pipe(&mut self, pipe_message: PipeMessage) -> bool {
         if let Some(payload) = pipe_message.payload {
             // I have no idea how to avoid race conditions with Zellij's architecture
+            // there is `get_focused_pane` function, but PaneInfo.terminal_command is always None
             self.asked_direction = Some(payload);
             list_clients();
         } else {
-            if self.print_to_log {
-                eprintln!("[zellij.nvim] no pipe payload?");
-            };
+            log!(self, "[zellij.nvim] no pipe payload?");
         };
 
         return false; // No need to render UI.
@@ -98,36 +106,29 @@ impl State {
             self.print_to_log = matches!(print_to_log.trim(), "true" | "t" | "y" | "1");
         }
 
-        if self.print_to_log {
-            eprintln!("[zellij.nvim] Configuration loaded.");
-            eprintln!("[zellij.nvim] Vim commands: {:?}", self.vim_commands);
-        }
+        log!(self, "[zellij.nvim] Configuration loaded.");
+        log!(self, "[zellij.nvim] Vim commands: {:?}", self.vim_commands);
     }
 
     fn navigate(&mut self, direction: String, clients: Vec<ClientInfo>) {
-        if self.print_to_log {
-            eprintln!("[zellij.nvim] asked to navigate to '{}'", direction);
-        };
+        log!(self, "[zellij.nvim] asked to navigate to '{}'", direction);
 
         let Some(current_client) = clients
             .iter()
             .find(|client| client.is_current_client && !client.running_command.is_empty())
         else {
-            if self.print_to_log {
-                eprintln!("[zellij.nvim] no client is running")
-            };
+            log!(self, "[zellij.nvim] no client is running");
             return;
         };
 
         let running_command = current_client.running_command.trim().to_string();
         if running_command == "N/A" {
-            if self.print_to_log {
-                eprintln!(
-                    "[zellij.nvim] no command found, trying to navigate through zellij anyway"
-                );
-                self.navigate_in_zellij(direction);
-                return;
-            }
+            log!(
+                self,
+                "[zellij.nvim] no command found, trying to navigate through zellij anyway"
+            );
+            self.navigate_in_zellij(direction);
+            return;
         }
 
         let running_command_exe = running_command.split_whitespace().collect::<Vec<_>>()[0]
@@ -139,12 +140,13 @@ impl State {
         let is_vim_cmd = self.vim_commands.contains(&running_command.to_string())
             || self.vim_commands.contains(&running_command_exe);
 
-        if self.print_to_log {
-            eprintln!(
-                "[zellij.nvim] Detected command: `{}`; Executable: `{}`; Is Vim? {}.",
-                running_command, running_command_exe, is_vim_cmd,
-            );
-        };
+        log!(
+            self,
+            "[zellij.nvim] Detected command: `{}`; Executable: `{}`; Is Vim? {}.",
+            running_command,
+            running_command_exe,
+            is_vim_cmd,
+        );
 
         if is_vim_cmd {
             self.navigate_in_vim(direction);
@@ -154,12 +156,11 @@ impl State {
     }
 
     fn navigate_in_vim(&mut self, direction: String) {
-        if self.print_to_log {
-            eprintln!(
-                "[zellij.nvim] navigating to direction '{}' in vim",
-                direction
-            );
-        }
+        log!(
+            self,
+            "[zellij.nvim] navigating to direction '{}' in vim",
+            direction
+        );
         let bytes = match direction.as_ref() {
             "right" => CTRL_L,
             "right-or-tab" => CTRL_L,
@@ -179,18 +180,15 @@ impl State {
         };
         write(bytes.to_vec());
 
-        if self.print_to_log {
-            eprintln!("[zellij.nvim] sent '{}' key to vim", direction);
-        };
+        log!(self, "[zellij.nvim] sent '{}' key to vim", direction);
     }
 
     fn navigate_in_zellij(&mut self, direction: String) {
-        if self.print_to_log {
-            eprintln!(
-                "[zellij.nvim] navigating to direction '{}' in zellij",
-                direction
-            );
-        }
+        log!(
+            self,
+            "[zellij.nvim] navigating to direction '{}' in zellij",
+            direction
+        );
         match direction.as_ref() {
             "right" => move_focus(Direction::Right),
             "right-or-tab" => move_focus_or_tab(Direction::Right),
@@ -209,8 +207,6 @@ impl State {
             }
         }
 
-        if self.print_to_log {
-            eprintln!("[zellij.nvim] moved to direction '{}'", direction);
-        };
+        log!(self, "[zellij.nvim] moved to direction '{}'", direction);
     }
 }
