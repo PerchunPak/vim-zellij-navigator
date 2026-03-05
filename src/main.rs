@@ -29,14 +29,13 @@ register_plugin!(State);
 
 impl ZellijPlugin for State {
     fn load(&mut self, configuration: BTreeMap<String, String>) {
-        // request_permission(&[
-        //     // PermissionType::RunCommands,
-        //     PermissionType::ChangeApplicationState,
-        //     PermissionType::ReadApplicationState,
-        // ]);
-        // if self.permissions_granted {
-        //     hide_self();
-        // }
+        request_permission(&[
+            PermissionType::ChangeApplicationState,
+            PermissionType::ReadApplicationState,
+        ]);
+        if self.permissions_granted {
+            hide_self();
+        }
         self.load_configuration(configuration);
     }
 
