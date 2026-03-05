@@ -9,7 +9,7 @@ const CTRL_H: &'static [u8; 1] = b"\x08";
 
 struct State {
     permissions_granted: bool,
-    lock_trigger_cmds: Vec<String>,
+    vim_commands: Vec<String>,
     asked_direction: Option<String>,
     print_to_log: bool,
 }
@@ -18,7 +18,7 @@ impl Default for State {
     fn default() -> Self {
         Self {
             permissions_granted: false,
-            lock_trigger_cmds: vec!["vim".to_string(), "nvim".to_string()],
+            vim_commands: vec!["vim".to_string(), "nvim".to_string()],
             asked_direction: None,
             print_to_log: false,
         }
@@ -87,8 +87,8 @@ impl ZellijPlugin for State {
 
 impl State {
     fn load_configuration(&mut self, configuration: BTreeMap<String, String>) {
-        if let Some(lock_trigger_cmds) = configuration.get("triggers") {
-            self.lock_trigger_cmds = lock_trigger_cmds
+        if let Some(vim_commands) = configuration.get("vim_commands") {
+            self.vim_commands = vim_commands
                 .split('|')
                 .map(|s| s.trim().to_string())
                 .collect();
@@ -99,10 +99,7 @@ impl State {
 
         if self.print_to_log {
             eprintln!("[zellij.nvim] Configuration loaded.");
-            eprintln!(
-                "[zellij.nvim] Trigger commands: {:?}",
-                self.lock_trigger_cmds
-            );
+            eprintln!("[zellij.nvim] Vim commands: {:?}", self.vim_commands);
         }
     }
 
@@ -121,75 +118,78 @@ impl State {
             return;
         };
 
-        let running_command = current_client.running_command.trim().to_string();
-        if running_command == "N/A" {
-            if self.print_to_log {
-                eprintln!("[zellij.nvim] No command detected.");
-            }
-            return;
-        };
+        match current_client.running_command.trim() {
+            "N/A" => self.navigate_in_zellij(direction),
+            running_command => self.navigate_in_vim(direction, running_command),
+        }
+    }
 
+    fn navigate_in_vim(&mut self, direction: String, running_command: &str) {
         let running_command_exe = running_command.split_whitespace().collect::<Vec<_>>()[0]
             .split('/')
             .last()
             .unwrap_or("")
             .to_string();
 
-        let is_trigger_cmd = self.lock_trigger_cmds.contains(&running_command)
-            || self.lock_trigger_cmds.contains(&running_command_exe);
+        let is_vim_cmd = self.vim_commands.contains(&running_command.to_string())
+            || self.vim_commands.contains(&running_command_exe);
 
         if self.print_to_log {
             eprintln!(
-                "[zellij.nvim] Detected command: `{}`; Executable: `{}`; Is trigger? {}.",
-                running_command, running_command_exe, is_trigger_cmd,
+                "[zellij.nvim] Detected command: `{}`; Executable: `{}`; Is Vim? {}.",
+                running_command, running_command_exe, is_vim_cmd,
             );
         };
 
-        if is_trigger_cmd {
-            let bytes = match direction.as_ref() {
-                "right" => CTRL_L,
-                "right-or-tab" => CTRL_L,
-                "up" => CTRL_K,
-                "down" => CTRL_J,
-                "left" => CTRL_H,
-                "left-or-tab" => CTRL_H,
-                _ => {
-                    // no 'if self.print_to_log' because this is a critical mistake
-                    // there is probably a better way to print a message than to logs
-                    eprintln!(
-                        "[zellij.nvim] invalid direction '{}' provided, should be one of: right, right-or-tab, up, down, left, left-or-tab",
-                        direction,
-                    );
-                    return;
-                }
-            };
-            write(bytes.to_vec());
+        if !is_vim_cmd {
+            return;
+        }
 
-            if self.print_to_log {
-                eprintln!("[zellij.nvim] sent '{}' key to vim", direction);
-            };
-        } else {
-            match direction.as_ref() {
-                "right" => move_focus(Direction::Right),
-                "right-or-tab" => move_focus_or_tab(Direction::Right),
-                "up" => move_focus(Direction::Up),
-                "down" => move_focus(Direction::Down),
-                "left" => move_focus(Direction::Left),
-                "left-or-tab" => move_focus_or_tab(Direction::Left),
-                _ => {
-                    // no 'if self.print_to_log' because this is a critical mistake
-                    // there is probably a better way to print a message than to logs
-                    eprintln!(
-                        "[zellij.nvim] invalid direction '{}' provided, should be one of: right, right-or-tab, up, down, left, left-or-tab",
-                        direction,
-                    );
-                    return;
-                }
+        let bytes = match direction.as_ref() {
+            "right" => CTRL_L,
+            "right-or-tab" => CTRL_L,
+            "up" => CTRL_K,
+            "down" => CTRL_J,
+            "left" => CTRL_H,
+            "left-or-tab" => CTRL_H,
+            _ => {
+                // no 'if self.print_to_log' because this is a critical mistake
+                // there is probably a better way to print a message than to logs
+                eprintln!(
+                    "[zellij.nvim] invalid direction '{}' provided, should be one of: right, right-or-tab, up, down, left, left-or-tab",
+                    direction,
+                );
+                return;
             }
+        };
+        write(bytes.to_vec());
 
-            if self.print_to_log {
-                eprintln!("[zellij.nvim] moved to direction '{}'", direction);
-            };
+        if self.print_to_log {
+            eprintln!("[zellij.nvim] sent '{}' key to vim", direction);
+        };
+    }
+
+    fn navigate_in_zellij(&mut self, direction: String) {
+        match direction.as_ref() {
+            "right" => move_focus(Direction::Right),
+            "right-or-tab" => move_focus_or_tab(Direction::Right),
+            "up" => move_focus(Direction::Up),
+            "down" => move_focus(Direction::Down),
+            "left" => move_focus(Direction::Left),
+            "left-or-tab" => move_focus_or_tab(Direction::Left),
+            _ => {
+                // no 'if self.print_to_log' because this is a critical mistake
+                // there is probably a better way to print a message than to logs
+                eprintln!(
+                    "[zellij.nvim] invalid direction '{}' provided, should be one of: right, right-or-tab, up, down, left, left-or-tab",
+                    direction,
+                );
+                return;
+            }
+        }
+
+        if self.print_to_log {
+            eprintln!("[zellij.nvim] moved to direction '{}'", direction);
         };
     }
 }
