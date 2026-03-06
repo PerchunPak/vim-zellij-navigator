@@ -1,4 +1,4 @@
-# zellij-autolock
+# vim-zellij-navigator
 
 *zellij-autolock* is an Zellij plugin that automatically switches between Zellij's "Normal" and "Locked" modes by inspecting the command running within the focused Zellij pane.
 

@@ -1,5 +1,5 @@
 [package]
-name = "stupid-simple-zellij-nvim"
+name = "vim-zellij-navigator"
 version = "0.1.0"
 authors = []
 edition = "2024"
