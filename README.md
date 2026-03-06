@@ -1,5 +1,12 @@
 # vim-zellij-navigator
 
+> [!CAUTION]
+> Do not use this. I have spent an entire day to write this just to discover
+> there is already
+> a [vim-zellij-navigator](https://github.com/hiasr/vim-zellij-navigator) that
+> does exactly the same that this plugin does. But hey, at least I practiced
+> some Rust, it was fun.
+
 Seamlessly integrate switching panes and tabs between Zellij and Neovim.
 
 This is basically just rewritten [nvim-tmux-navigator](https://github.com/alexghergh/nvim-tmux-navigation/).
